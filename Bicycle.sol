@@ -33,10 +33,11 @@ contract Bicycle is ERC721Enumerable {
         address seller;
         bool locking;
     }
-   mapping(address => locked) users;
+   mapping(address => locked) public users;
 
-   mapping(uint => address) buyers;
-   uint totalbuyers;
+
+    mapping(uint => address) public buyers;
+    uint totalbuyers;
 
     mapping(uint256 => string) public _uris;
 
@@ -52,9 +53,6 @@ contract Bicycle is ERC721Enumerable {
         require(msg.sender == owner, "Permission erR0!");
         _;
     }
-
-    
-
     
     event trans(uint256 isSuccess);
 
@@ -97,7 +95,7 @@ contract Bicycle is ERC721Enumerable {
     }
 
 
-    function uploadsell(string memory _brand, uint _year, uint _price, string memory _contact, address payable _owner) public payable{
+    function uploadsell(string memory _brand, uint _year, uint _price, string memory _contact, string memory _uri) public payable{
         require(msg.value >= _price/100, "not enough");
 
         uint Commission = msg.value - _price/100;
@@ -109,11 +107,12 @@ contract Bicycle is ERC721Enumerable {
         sellingList[counter].contact = _contact;
         sellingList[counter].id = counter;
         sellingList[counter].seller = msg.sender;
+        sellingList[counter].uri = _uri;
         counter++;
 
     }
 
-    function buy(uint _id, address payable _seller) public payable returns(bool){
+    function buy(uint _id) public payable returns(bool){
         //require(msg.value >= sellingList[_id].price, "not enough to buy");
         if(msg.value < sellingList[_id].price){
             emit trans(0);
@@ -129,16 +128,15 @@ contract Bicycle is ERC721Enumerable {
         users[msg.sender].locking = true;
         users[msg.sender].seller = sellingList[_id].seller;
         buyers[totalbuyers++] = msg.sender;
-        NFTmint(msg.sender, _id);
-        setTokenUri(_id, sellingList[_id].uri);
 
         emit trans(1);
         delete sellingList[_id];
         return true;
     }
 
-    function NFTmint(address _to, uint _tokedId) private {
+    function NFTmint(address _to, uint _tokedId, string memory _uri) public onlyOwner {
         _mint(_to, _tokedId);
+        setTokenUri(_tokedId, _uri);
     }
 
     function purchase_confirmation() public {
