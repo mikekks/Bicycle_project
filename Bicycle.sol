@@ -146,11 +146,11 @@ contract Bicycle is ERC721Enumerable {
     }
 
     function seller_confirmation(address _buyer) public {
-        require(block.timestamp >= users[msg.sender].refund, "It's still refund period");
+        require(block.timestamp >= users[msg.sender].refund || users[_buyer].locking == false, "It's still refund period");
         require(users[_buyer].seller == msg.sender, "Not seller");
 
         uint256 price = users[_buyer].amount;
-
+        delete users[_buyer];
         payable(msg.sender).transfer(price);
 
     }
