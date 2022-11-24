@@ -2,8 +2,10 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol"; // 메인
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // 메인
 
-contract Bicycle is ERC721Enumerable {
+
+contract Bicycle is ERC721URIStorage {
 
     uint counter;
     address owner;
@@ -24,17 +26,19 @@ contract Bicycle is ERC721Enumerable {
     mapping(uint=>bikeInfo) public sellingList;
 
 
-    uint256 lockTime = 3 days;
-    uint256 refundTime = 5 days;
+    //uint256 lockTime = 3 days;
+    //uint256 refundTime = 5 days;
+    uint256 lockTime = 10;
+    uint256 refundTime = 60; 
     struct locked{
         uint256 lock;
         uint256 refund;
         uint256 amount;
         address seller;
         bool locking;
+        uint256 tokenId;
     }
    mapping(address => locked) public users;
-
 
     mapping(uint => address) public buyers;
     uint totalbuyers;
@@ -90,8 +94,9 @@ contract Bicycle is ERC721Enumerable {
     function setTokenUri(
         uint256 tokenId,
         string memory _uri
-    ) public onlyOwner {
+    ) public {
         _uris[tokenId] = _uri;
+        _setTokenURI(tokenId, _uri);
     }
 
 
@@ -127,22 +132,26 @@ contract Bicycle is ERC721Enumerable {
         users[msg.sender].amount = sellingList[_id].price;
         users[msg.sender].locking = true;
         users[msg.sender].seller = sellingList[_id].seller;
+        users[msg.sender].tokenId = _id;
         buyers[totalbuyers++] = msg.sender;
 
         emit trans(1);
-        delete sellingList[_id];
         return true;
     }
 
-    function NFTmint(address _to, uint _tokedId, string memory _uri) public onlyOwner {
-        _mint(_to, _tokedId);
-        setTokenUri(_tokedId, _uri);
+    function NFTmint(address _to, uint _tokenId, string memory _uri) public {
+        _mint(_to, _tokenId);   
+        setTokenUri(_tokenId, _uri);
     }
 
     function purchase_confirmation() public {
         require(users[msg.sender].locking == true, "Not buyer");
 
         users[msg.sender].locking = false;
+        address _seller = users[msg.sender].seller;
+        uint price = users[msg.sender].amount;
+        payable(_seller).transfer(price);
+
     }
 
     function seller_confirmation(address _buyer) public {
@@ -150,7 +159,10 @@ contract Bicycle is ERC721Enumerable {
         require(users[_buyer].seller == msg.sender, "Not seller");
 
         uint256 price = users[_buyer].amount;
+        uint256 _id = users[_buyer].tokenId;
+        delete sellingList[_id];
         delete users[_buyer];
+        
         payable(msg.sender).transfer(price);
 
     }
@@ -160,7 +172,9 @@ contract Bicycle is ERC721Enumerable {
 
         uint256 price = users[_buyer].amount;
         address seller = users[_buyer].seller;
-
+        uint256 _id = users[_buyer].tokenId;
+        delete sellingList[_id];
+        delete users[_buyer];
         payable(seller).transfer(price);
 
     }
@@ -170,6 +184,9 @@ contract Bicycle is ERC721Enumerable {
         require(block.timestamp >= users[msg.sender].lock);
 
         uint256 value = users[msg.sender].amount;
+        uint256 _id = users[msg.sender].tokenId;
+
+        delete sellingList[_id];
         delete users[msg.sender];
 
         payable(msg.sender).transfer(value);
