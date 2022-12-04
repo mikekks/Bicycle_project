@@ -11,6 +11,7 @@ contract Bicycle is ERC721URIStorage {
     address owner;
     uint256 interval;
     uint256 lastTimeStamp;
+    
 
     //uint public test;
 
